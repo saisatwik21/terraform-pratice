@@ -7,3 +7,4 @@ terraform {
    # write_lock_file = true                                 
   }
 }
+
