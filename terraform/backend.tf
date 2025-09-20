@@ -4,6 +4,6 @@ terraform {
     key             = "first"
     region          = "us-east-1"                          # Replace with your AWS region
     encrypt         = true                                 # Server-side encryption
-    write_lock_file = true                                 
+   # write_lock_file = true                                 
   }
 }
