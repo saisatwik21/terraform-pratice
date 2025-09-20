@@ -33,7 +33,8 @@ jobs:
       - name: Terraform Plan
         run: terraform -chdir=terraform plan -no-color > plan.txt
 
-      - name: Comment Terraform Plan
+      - name: Comment Terraform Plan on PR
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
         with:
           script: |
