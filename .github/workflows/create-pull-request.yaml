@@ -61,31 +61,16 @@ jobs:
         with:
           fetch-depth: 0  # fetch full history
 
-      - name: Extract Ticket Number from Commit
-        id: ticket
-        shell: bash
-        run: |
-          # Safely get last commit message; fallback to empty string if none
-          COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null || echo "")
-          
-          # Extract ticket number using regex; ignore exit code if no match
-          ticket=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+' || true)
-          
-          if [ -n "$ticket" ]; then
-            echo "ticket_number=$ticket" >> $GITHUB_ENV
-          else
-            echo "ticket_number=NO-TICKET" >> $GITHUB_ENV
-
       - name: Prepare PR Body
         run: |
-          sed "s/{{TICKET_NUMBER}}/${{ env.ticket_number }}/g" .github/template.md > pr_body.md
+          cp .github/template.md pr_body.md
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
           base: main
           branch: ${{ github.ref_name }}
-          title: "${{ env.ticket_number }} | Terraform changes"
+          title: "Terraform changes"
           body-path: pr_body.md
           labels: auto-pr
           reviewers: saisatwik21
