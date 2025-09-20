@@ -1,8 +1,12 @@
 name: Terraform PR Workflow
 
+# Trigger on push to non-main branches AND on PR creation targeting main
 on:
   push:
     branches-ignore:
+      - main
+  pull_request:
+    branches:
       - main
 
 jobs:
