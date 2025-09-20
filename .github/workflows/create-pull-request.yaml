@@ -1,0 +1,70 @@
+name: Terraform PR Workflow
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  terraform-plan:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: terraform -chdir=terraform init
+
+      - name: Terraform Plan
+        run: terraform -chdir=terraform plan -no-color > plan.txt
+
+      - name: Comment Terraform Plan
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('plan.txt', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### Terraform Plan\n\`\`\`\n${plan}\n\`\`\``
+            })
+
+  create-pr:
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Extract Ticket Number from Commit
+        id: ticket
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if [[ "$COMMIT_MSG" =~ ([A-Z]+-[0-9]+) ]]; then
+            echo "ticket_number=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+          else
+            echo "ticket_number=NO-TICKET" >> $GITHUB_ENV
+
+      - name: Prepare PR Body
+        run: |
+          sed "s/{{TICKET_NUMBER}}/${{ env.ticket_number }}/g" .github/template.md > pr_body.md
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          base: main
+          branch: ${{ github.ref_name }}
+          title: "${{ env.ticket_number }} | Terraform changes"
+          body-path: pr_body.md
+          labels: auto-pr
+          reviewers: saisatwik21
