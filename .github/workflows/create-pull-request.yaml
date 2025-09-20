@@ -49,7 +49,7 @@ jobs:
         run: gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
 
       # 8️⃣ Create or update Pull Request
-      - name: Create Pull Request
+      - name: Create or update Pull Request
         run: |
           PR_EXISTS=$(gh pr list --head $GITHUB_REF_NAME --json number -q '.[].number')
           if [ -z "$PR_EXISTS" ]; then
@@ -64,3 +64,4 @@ jobs:
           else
             # Update existing PR body
             gh pr edit $PR_EXISTS --body "$(cat plan.txt)"
+          fi
