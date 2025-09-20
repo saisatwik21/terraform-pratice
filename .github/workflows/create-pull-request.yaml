@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # important for git log
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -56,9 +58,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # important for git log
 
       - name: Extract Ticket Number from Commit
         id: ticket
+        shell: bash
         run: |
           COMMIT_MSG=$(git log -1 --pretty=%B)
           ticket=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+')
