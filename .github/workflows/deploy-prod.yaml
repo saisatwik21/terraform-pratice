@@ -9,23 +9,34 @@ jobs:
   terraform-apply:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
+      # 2️⃣ Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.5
 
+      # 3️⃣ Configure AWS credentials
       - name: Configure AWS Credentials
         run: |
           echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
 
+      # 4️⃣ Terraform init
       - name: Terraform Init
         run: terraform -chdir=terraform init
 
+      # 5️⃣ Terraform plan (optional: for logging)
+      - name: Terraform Plan
+        run: terraform -chdir=terraform plan -no-color > plan.txt
+
+      # 6️⃣ Terraform apply
       - name: Terraform Apply
         run: terraform -chdir=terraform apply -auto-approve

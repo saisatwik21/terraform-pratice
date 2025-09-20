@@ -4,73 +4,63 @@ on:
   push:
     branches-ignore:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  terraform-plan:
+  terraform-pr:
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       pull-requests: write
     steps:
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # fetch full history
+          fetch-depth: 0  # full history
 
+      # 2️⃣ Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.5
 
+      # 3️⃣ Configure AWS credentials
       - name: Configure AWS Credentials
         run: |
           echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
 
+      # 4️⃣ Terraform init
       - name: Terraform Init
         run: terraform -chdir=terraform init
 
+      # 5️⃣ Terraform plan
       - name: Terraform Plan
         run: terraform -chdir=terraform plan -no-color > plan.txt
 
-      - name: Comment Terraform Plan on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync('plan.txt', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `### Terraform Plan\n\`\`\`\n${plan}\n\`\`\``
-            })
-
-  create-pr:
-    runs-on: ubuntu-latest
-    needs: terraform-plan
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # fetch full history
-
-      - name: Prepare PR Body
+      # 6️⃣ Install GitHub CLI
+      - name: Install GitHub CLI
         run: |
-          cp .github/template.md pr_body.md
+          sudo apt update
+          sudo apt install gh -y
 
+      # 7️⃣ Authenticate GitHub CLI
+      - name: Authenticate GitHub CLI
+        run: gh auth login --with-token <<< "${{ secrets.GITHUB_TOKEN }}"
+
+      # 8️⃣ Create or update Pull Request
       - name: Create Pull Request
-        uses: sai/create-pull-request@v5
-        with:
-          base: main
-          branch: ${{ github.ref_name }}
-          title: "Terraform changes"
-          body-path: pr_body.md
-          labels: auto-pr
-          reviewers: saisatwik21
+        run: |
+          PR_EXISTS=$(gh pr list --head $GITHUB_REF_NAME --json number -q '.[].number')
+          if [ -z "$PR_EXISTS" ]; then
+            # Create a new PR
+            gh pr create \
+              --title "Terraform changes" \
+              --body "$(cat plan.txt)" \
+              --base main \
+              --head $GITHUB_REF_NAME \
+              --reviewer saisatwik21 \
+              --label auto-pr
+          else
+            # Update existing PR body
+            gh pr edit $PR_EXISTS --body "$(cat plan.txt)"
