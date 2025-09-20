@@ -17,7 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # important for git log
+          fetch-depth: 0  # fetch full history to ensure git log works
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -59,14 +59,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # important for git log
+          fetch-depth: 0  # fetch full history to ensure git log works
 
       - name: Extract Ticket Number from Commit
         id: ticket
         shell: bash
         run: |
-          COMMIT_MSG=$(git log -1 --pretty=%B)
+          # Safely get last commit message; fallback to empty string if none
+          COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null || echo "")
+          
+          # Extract ticket number using regex
           ticket=$(echo "$COMMIT_MSG" | grep -oE '[A-Z]+-[0-9]+')
+          
           if [ -n "$ticket" ]; then
             echo "ticket_number=$ticket" >> $GITHUB_ENV
           else
@@ -84,4 +88,4 @@ jobs:
           title: "${{ env.ticket_number }} | Terraform changes"
           body-path: pr_body.md
           labels: auto-pr
-          reviewers: saisatwik21
+          reviewers: your-github-username
